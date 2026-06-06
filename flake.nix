@@ -12,6 +12,9 @@
             devShells."x86_64-linux".default = pkgs.mkShell {
                 packages = [ 
                     pkgs.python312
+                    pkgs.python312Packages.osmnx
+                    pkgs.python312Packages.folium
+                    pkgs.stdenv.cc.cc.lib
                 ];
                 shellHook = ''
                     echo "-------------------"
