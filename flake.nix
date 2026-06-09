@@ -14,6 +14,7 @@
                     pkgs.python312
                     pkgs.python312Packages.osmnx
                     pkgs.python312Packages.folium
+                    pkgs.python312Packages.ortools
                     pkgs.stdenv.cc.cc.lib
                 ];
                 shellHook = ''
