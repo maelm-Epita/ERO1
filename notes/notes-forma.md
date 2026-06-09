@@ -28,7 +28,7 @@ Soit k une deneigeuse appartenenant a K
 Soit t_i_j le temps necessaire pour parcourir l'arrete (i, j) :
 t_i_j = d_i_j / 10
 
-Soit T_k le temps total d'operation pour une deneigeuse k :
+Soit T_k le temps total pour une deneigeuse k :
 T_k = somme(t_i_j)
 
 Temp pour une deneigeuse k :
@@ -48,7 +48,7 @@ Temps = max(T_k) ; pour chaque k de K
 
 # Fonction objectif
 Optimisation multi-objectif : on minimise conjointement le cout et le temps global
-On utilise la methode de la somme ponderee pour ramener ces deux criteres a un seul score global a minimiser.
+On utilise la somme ponderee pour ramener les deux criteres a un seul score global a minimiser
 
 Soient alpha et beta les coefficients de ponderation :
 CT = ( alpha * Cout ) + ( beta * Temps )
