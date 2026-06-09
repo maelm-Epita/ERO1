@@ -4,7 +4,7 @@ Carp multi vehicule
 Chaque deneigeuse part du depot et revient au depot
 L'ensemble des tournees des deneigeuses doit couvrir toutes les routes de la zone
 
-Minimiser le cout
+Minimiser le cout et le temp
 
 # Donnees 
 - Nombre de deneigeuses: ?
@@ -16,10 +16,42 @@ Minimiser le cout
 
 - Graph du secteur
 
+# Formalisation mathematique
+Soit un graph G = (V, E) 
+- V l'ensemble des sommets
+- E l'ensemble des arretes
+Chaque arrete (i, j) possede une distance d_i_j en km
+
+Soit K l'ensemble des deneigeuses
+Soit k une deneigeuse appartenenant a K
+
+Soit t_i_j le temps necessaire pour parcourir l'arrete (i, j) :
+t_i_j = d_i_j / 10
+
+Soit T_k le temps total d'operation pour une deneigeuse k :
+T_k = somme(t_i_j)
+
+Temp pour une deneigeuse k :
+- heures_norm_k = min(T_k, 8)
+- heures_sup_k = max(0, T_k - 8)
+- jours_k = T_k / 24
+
+Cout pour une deneigeuse :
+Soit d_k la distance totale parcourue
+C_k = jours_k * 500 + d_k * 1.1 + heures_norm_k * 1.1 + heures_sup_k * 1.6
+
+Cout total :
+Cout = Somme(C_k) ; pour chaque k de K
+
+Temps global du deneigement :
+Temps = max(T_k) ; pour chaque k de K
+
 # Fonction objectif
-Minimiser le cout
-Cout = Somme(i, cout_i) ; pour chaque deneigeuse i 
-cout_i = jours_i * 500 + km_i * 1.1 + heures_norm_i * 1.1 + heures_sup_i * 1.6 ; le cout total d'une deneigeuse
+Optimisation multi-objectif : on minimise conjointement le cout et le temps global
+On utilise la methode de la somme ponderee pour ramener ces deux criteres a un seul score global a minimiser.
+
+Soient alpha et beta les coefficients de ponderation :
+CT = ( alpha * Cout ) + ( beta * Temps )
 
 # Contraintes
 
