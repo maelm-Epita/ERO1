@@ -11,7 +11,7 @@ Minimiser le cout et le temp
 - Cout journalier fixe d'une deneigeuse : 500$ / jour 
 - Cout kilometrique d'une deneigeuse : 1.1$ / km
 - Cout horaire sur les 8 premieres heures : 1.1$ / h
-- Cout horaire au dela des 8 premieres heures : 1.6$ / h
+- Cout horaire au dela des 8 premieres heures : 1.3$ / h
 - Vitesse moyenne : 10 km / h
 
 - Graph du secteur
@@ -29,12 +29,12 @@ Soit t_i_j le temps necessaire pour parcourir l'arrete (i, j) :
 t_i_j = d_i_j / 10
 
 Soit T_k le temps total pour une deneigeuse k :
-T_k = somme(t_i_j)
+T_k = somme(t_i_j) ----------------------------------------> ça dépend s'il elle va sur l'arete nan ?
 
 Temp pour une deneigeuse k :
 - heures_norm_k = min(T_k, 8)
 - heures_sup_k = max(0, T_k - 8)
-- jours_k = T_k / 24
+- jours_k = T_k / 24  ----------------> Est ce que c'est bien T_k/24, je pense pas parce que le prix de la denneigeuse c'est un cout fixe, si on sort la denneigeuse 3 heure on va pas payer (3/24) * 500 nan ? C'est plutot soit on sort la denneigeuse soit on la sort pas , donc jours_k = 1 si on l'utilise et jour_k = 0 sinon
 
 Cout pour une deneigeuse :
 Soit d_k la distance totale parcourue
