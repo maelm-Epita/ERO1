@@ -1,15 +1,18 @@
 import osmnx as ox
 import folium
 
-G = ox.graph_from_place("Verdun, Montréal, Canada", network_type="drive")
+sector = "Verdun, Montréal, Canada"
+G = ox.graph_from_place(sector, network_type="drive")
 print(G)
 
-m = folium.Map(location=[45.75, -73.85], zoom_start=12)
+sector_lat, sector_lon = ox.geocode(sector)
+
+map = folium.Map(location=[sector_lat, sector_lon], zoom_start=14)
 
 folium.PolyLine(
-    [(45.75, 4.85)],  # liste [(lat, lon), ...]
+    [(sector_lat, sector_lon)],  # liste [(lat, lon), ...]
     color="blue",
     weight=4
-).add_to(m)
+).add_to(map)
 
-m.save("carp_solution.html")
+map.save("carp_solution.html")
