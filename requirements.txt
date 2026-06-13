@@ -1,0 +1,10 @@
+osmnx
+networkx
+folium
+ortools
+pandas
+geopandas
+shapely
+numpy
+pyproj
+requests

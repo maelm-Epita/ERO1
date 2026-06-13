@@ -1,3 +1,0 @@
-osmnx
-folium
-numpy
