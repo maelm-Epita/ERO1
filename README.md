@@ -1,4 +1,4 @@
-# Installation et exécution du programme
+# Installation et exécution du programme de démonstation
 
 
 ## 1. Créer un environnement virtuel
@@ -39,19 +39,8 @@ python main.py
 
 ---
 
-## Résultats
+# Résultats
 
-À la fin de l'exécution, le programme :
+Vous trouverez les résultats pour chacun des secteurs dans le dossier `results`
 
-* affiche les statistiques d'optimisation dans le terminal ;
-* génère des cartes interactives HTML pour chaque scénario exécuté.
-
-Exemples de fichiers générés :
-
-```text
-Verdun_A.html
-Verdun_B.html
-Verdun_C.html
-```
-
-Ouvrez simplement ces fichiers dans un navigateur Web pour visualiser les trajets des déneigeuses.
+Chaque secteur possède un resultat par scénario sous forme de pages HTML, qu'il est possible d'ouvrir avec un navigateur web.
