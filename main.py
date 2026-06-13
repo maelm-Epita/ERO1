@@ -1,5 +1,3 @@
-"""Déneigement multi-quartiers avec OR-Tools — CARP simplifié, 3 scénarios."""
-
 import math
 import osmnx as ox
 import networkx as nx
@@ -7,12 +5,8 @@ import folium
 from collections import Counter
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
-# ══════════════════════════════════════════════════════════════
-#  DONNÉES PAR QUARTIER
-# ══════════════════════════════════════════════════════════════
-
+# Données
 DISTRICTS = {
-    # ── Verdun ────────────────────────────────────────────────
     "Verdun": {
         "sector": "Verdun, Montréal, Québec, Canada",
         "depot":  (45.4617, -73.5722),
@@ -32,7 +26,6 @@ DISTRICTS = {
                         "de l'église", "gaëtan-laberge", "champlain"},
     },
 
-    # ── Outremont ─────────────────────────────────────────────
     "Outremont": {
         "sector": "Outremont, Montréal, Québec, Canada",
         "depot":  (45.5177, -73.6093),
@@ -53,7 +46,6 @@ DISTRICTS = {
                         "acadie", "outremont", "maplewood"},
     },
 
-    # ── Anjou ─────────────────────────────────────────────────
     "Anjou": {
         "sector": "Anjou, Montréal, Québec, Canada",
         "depot":  (45.6050, -73.5600),
@@ -74,7 +66,6 @@ DISTRICTS = {
                         "beaubien", "galeries d'anjou", "pierre-de-coubertin"},
     },
 
-    # ── Rivière-des-Prairies–Pointe-aux-Trembles ──────────────
     "RDP-PAT": {
         "sector": "Rivière-des-Prairies-Pointe-aux-Trembles, Montréal, Québec, Canada",
         "depot":  (45.6620, -73.5290),
@@ -101,9 +92,9 @@ DISTRICTS = {
     },
 }
 
-# ── Paramètres Globaux ────────────────────────────────────────
+# Paramètres Globaux
 SPEED_KMH  = 10.0
-SPEED_MS   = SPEED_KMH / 3.6  # NOUVEAU : Conversion en m/s pour la pénalité de temps
+SPEED_MS   = SPEED_KMH / 3.6
 MAX_TRUCKS = 6
 TIME_LIMIT = 5
 COST_FIXED = 500.0
@@ -114,12 +105,12 @@ BETA       = 500
 BIG        = 10**9
 
 PRIORITY_LABELS = {1: "Priorité 1 (urgent)", 2: "Priorité 2 (secondaire)", 3: "Priorité 3 (local)"}
-TRUCK_COLORS = ["#e6194B", "#4363d8", "#3cb44b", "#f58231", "#911eb4", "#46f0f0"] # NOUVEAU : Couleurs des camions
+TRUCK_COLORS = ["#e6194B", "#4363d8", "#3cb44b", "#f58231", "#911eb4", "#46f0f0"]
 
 _MAJOR = {"motorway","trunk","primary","primary_link","motorway_link","trunk_link"}
 _SECONDARY = {"secondary","secondary_link","tertiary","tertiary_link"}
 
-# ── Utilitaires ───────────────────────────────────────────────
+# Utilitaires
 def poi_nodes(G, poi_list, radius_m=150):
     nodes = set()
     for lat, lon in poi_list:
@@ -155,7 +146,7 @@ def make_jobs(G, priority_fn):
     jobs.sort(key=lambda x: x[4])
     return jobs
 
-# ── Scénarios ─────────────────────────────────────────────────
+# Scénarios
 def scenario_A(G, district_data):
     def prio(data):
         hw = highway(data)
@@ -215,7 +206,7 @@ def scenario_C(G, district_data):
     jobs.sort(key=lambda x: x[4])
     return jobs
 
-# ── Distances & coûts ─────────────────────────────────────────
+# Distances & coûts
 def precompute_distances(GU, jobs, depot):
     nodes = {depot} | {u for u,v,*_ in jobs} | {v for u,v,*_ in jobs}
     return {n: nx.single_source_dijkstra_path_length(GU, n, weight="length") for n in nodes}
@@ -229,18 +220,18 @@ def truck_cost(km):
 
 def solution_stats(routes):
     return {
-        "k":         len(routes),
-        "km":        sum(r["km"]    for r in routes),
+        "k":       len(routes),
+        "km":       sum(r["km"]    for r in routes),
         "cost":      sum(r["cost"]  for r in routes),
         "hours":     max(r["hours"] for r in routes),
         "objective": sum(r["cost"]  for r in routes) + BETA * max(r["hours"] for r in routes),
     }
 
-# ── OR-Tools ──────────────────────────────────────────────────
+# OR-Tools
 def solve_vrp(jobs, depot, dist, nb_trucks):
     n = len(jobs) + 1
     matrix_dist = [[0]*n for _ in range(n)]
-    matrix_time = [[0]*n for _ in range(n)]  # NOUVEAU : Matrice pour forcer les priorités
+    matrix_time = [[0]*n for _ in range(n)]
     
     for i in range(n):
         src = depot if i == 0 else jobs[i-1][1]
@@ -250,25 +241,22 @@ def solve_vrp(jobs, depot, dist, nb_trucks):
             
             dist_meters = dist_m(dist, src, dst) + int(svc)
             matrix_dist[i][j] = dist_meters
-            matrix_time[i][j] = int(dist_meters / SPEED_MS) # Temps en secondes
+            matrix_time[i][j] = int(dist_meters / SPEED_MS)
 
     manager = pywrapcp.RoutingIndexManager(n, nb_trucks, 0)
     routing = pywrapcp.RoutingModel(manager)
 
-    # 1. Dimension Distance
     dist_cb = routing.RegisterTransitCallback(
         lambda fi, ti: matrix_dist[manager.IndexToNode(fi)][manager.IndexToNode(ti)])
     routing.SetArcCostEvaluatorOfAllVehicles(dist_cb)
     routing.AddDimension(dist_cb, 0, BIG, True, "Distance")
     routing.GetDimensionOrDie("Distance").SetGlobalSpanCostCoefficient(100)
 
-    # 2. NOUVEAU : Dimension Temps pour forcer les scénarios (Priorités)
     time_cb = routing.RegisterTransitCallback(
         lambda fi, ti: matrix_time[manager.IndexToNode(fi)][manager.IndexToNode(ti)])
-    routing.AddDimension(time_cb, 0, 86400, True, "Time") # 86400s = 24h
+    routing.AddDimension(time_cb, 0, 86400, True, "Time")
     time_dim = routing.GetDimensionOrDie("Time")
     
-    # Application de la pénalité : Chaque seconde de retard sur une P1 coûte très cher !
     for j in range(1, n):
         idx = manager.NodeToIndex(j)
         prio = jobs[j-1][4]
@@ -276,7 +264,6 @@ def solve_vrp(jobs, depot, dist, nb_trucks):
         if weight > 0:
             time_dim.SetCumulVarSoftUpperBound(idx, 0, weight)
 
-    # 3. Dimension Nombre de routes
     cnt_idx = routing.RegisterTransitCallback(
         lambda fi, ti: 0 if manager.IndexToNode(ti) == 0 else 1)
     routing.AddDimension(cnt_idx, 0, len(jobs), True, "Count")
@@ -296,13 +283,12 @@ def solve_vrp(jobs, depot, dist, nb_trucks):
     routes = []
     for v in range(nb_trucks):
         idx, route_jobs, meters = routing.Start(v), [], 0
-        step = 1 # NOUVEAU : Enregistre l'ordre de passage
+        step = 1
         while not routing.IsEnd(idx):
             nxt = sol.Value(routing.NextVar(idx))
             i, j = manager.IndexToNode(idx), manager.IndexToNode(nxt)
             meters += matrix_dist[i][j]
             if j != 0:
-                # Ajoute l'étape (step) à la fin du tuple job pour l'affichage
                 route_jobs.append(jobs[j-1] + (step,))
                 step += 1
             idx = nxt
@@ -311,7 +297,7 @@ def solve_vrp(jobs, depot, dist, nb_trucks):
                        "hours": km / SPEED_KMH, "cost": truck_cost(km)})
     return routes
 
-# ── Carte ─────────────────────────────────────────────────────
+# Carte
 def edge_points(G, job):
     u, v, k = job[0], job[1], job[2]
     data = G[u][v][k]
@@ -325,7 +311,6 @@ def draw_map(G, routes, stats, name, district_name, district_data):
 
     legend_trucks = ""
 
-    # NOUVEAU : Tracé par couleur de camion et infobulle d'ordre
     for r in routes:
         color = TRUCK_COLORS[r['id'] % len(TRUCK_COLORS)]
         legend_trucks += f'<span style="color:{color};font-weight:bold">━</span> Camion {r["id"]+1} ({r["km"]:.1f} km)<br>'
@@ -372,7 +357,7 @@ def draw_map(G, routes, stats, name, district_name, district_data):
     m.save(out)
     print(f"  Carte : {out}")
 
-# ── Résolution ────────────────────────────────────────────────
+# Résolution
 def run_scenario(G, GU, scenario_fn, name, district_name, district_data):
     print(f"\n{'='*50}\n  SCÉNARIO {name} ({district_name})\n{'='*50}")
     
@@ -406,11 +391,10 @@ def run_scenario(G, GU, scenario_fn, name, district_name, district_data):
     best_stats["counts"] = counts
     return best_stats
 
-# ── Main ──────────────────────────────────────────────────────
+# Main
 def main():
     ox.settings.use_cache = True
     
-    # 1. Sélection utilisateur
     print("\n--- MENU DÉNEIGEMENT ---")
     districts_list = list(DISTRICTS.keys())
     for i, district in enumerate(districts_list, 1):
@@ -429,7 +413,6 @@ def main():
         print("Choix invalide. Fermeture du programme.")
         return
 
-    # 2. Exécution des scénarios pour le(s) quartier(s) choisi(s)
     for district_name in selected_districts:
         district_data = DISTRICTS[district_name]
         print(f"\n\n{'#'*65}\n# TRAITEMENT DE : {district_name.upper()}\n{'#'*65}")
@@ -442,7 +425,6 @@ def main():
         for fn, name in [(scenario_A, "A"), (scenario_B, "B"), (scenario_C, "C")]:
             all_stats[name] = run_scenario(G, GU, fn, name, district_name, district_data)
 
-        # 3. Comparaison locale au quartier
         print(f"\n{'='*65}\n  COMPARAISON POUR {district_name.upper()}\n{'='*65}")
         print(f"  {'Scén':<6} | {'P1':>4} | {'P2':>4} | {'P3':>4} | {'Coût ($)':>9} | {'h max':>6} | {'km':>7}")
         print("  " + "-"*55)
